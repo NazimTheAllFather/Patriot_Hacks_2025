@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///Users/reshteenmalwan/Desktop/project_2/app/page.tsx"],"sourcesContent":["// app/page.tsx or app/page.js\nexport default function Home() {\n    return (\n      <div>\n        <h1>Welcome to my Next.js App!</h1>\n      </div>\n    )\n  }\n  "],"names":[],"mappings":"AAAA,8BAA8B;;;;;;;AACf,SAAS;IACpB,qBACE,8OAAC;kBACC,cAAA,8OAAC;sBAAG;;;;;;;;;;;AAGV"}}]
+}
