@@ -14,7 +14,7 @@ export default function Home() {
     >
       {/* MOVING LOGO */}
       <div className="absolute top-10 left-0 w-full overflow-hidden pointer-events-none">
-        <div className="animate-marquee w-full flex justify-start">
+        <div className="safefier-logo animate-slide w-full flex justify-start">
           <Image
             src="/images/LogoTransparent.png"
             alt="Safefier Logo"
