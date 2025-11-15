@@ -2,7 +2,7 @@
 Even AI needs a responsible parent.
 
 # The Problem
-Conversational AIs and chatbots are ubiquitous; whether it is for customers who would like to express
+Conversational AIs and chatbots are **ubiquitous**; whether it is for customers who would like to express
 
 their concerns about their orders through the Uber Eats app, or a user placing a job application at Hot
 
@@ -16,16 +16,16 @@ While these systems tend to be more convenient and efficient, they also introduc
 
 that can lead to psychological harm, legal liability, and the erosion of trust when it comes to AI-first
 
-companies and technologies. According to Ars Technica (Belanger, 2025), a professional technology
+companies and technologies. According to **Ars Technica** (Belanger, 2025), a professional technology
 
 news publication founded in 1998 by Condé Nast, a lawsuit was filed in August against OpenAI, in
 
-response to ChatGPT allegedly assisting a teenager in writing his own suicide note. The teenager then
+response to ChatGPT *allegedly* assisting a teenager in writing his own suicide note. The teenager then
 
 committed suicide.
 
 # Our solution
-Safefier acts like a “responsible parent” for AI chatbots. Instead of replacing a chatbot, it sits between
+**Safefier** acts like a “responsible parent” for AI chatbots. Instead of replacing a chatbot, it sits between
 
 the user and the AI and shows how unsafe responses could be intercepted and replaced.
 
