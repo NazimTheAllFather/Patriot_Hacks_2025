@@ -60,7 +60,8 @@ def Cosine_similarity(a, b):
     sum_of_vector_a_holder = []
     for i in range(len(a)):
         sum_of_vector_a_holder.append(a[i] ** 2)
-    sum_of_vector_a = sum(sum_of_vector_a_holder) ** 0.5  # 
+    
+    sum_of_vector_a = sum(sum_of_vector_a_holder) ** 2
 
     sum_of_vector_b_holder = []
     for i in range(len(b)):
@@ -151,90 +152,34 @@ def compare_answers(answer_1, answer_2):
 #This function is getting bot resposes, it implements the first flag mechanism as well. 
 def chat_bot_responce():
     input_query = input("Ask a Question: ")
-    retrived_info = retrive(input_query, 5)  # retrieving the 5 most relevant pieces of info
-
-    #Handling what happens with emptry retrival
-    relevant_chunks_only = []
-
-    for chunks, similarity_score in retrived_info:
-        if similarity_score >= WHAT_TO_RETRIVE_UP:
-            relevant_chunks_only.append((chunks, similarity_score))
-
-    if len(relevant_chunks_only) == 0:
-        full_answer = "No relevant info"
-        return input_query, retrived_info, full_answer, True
+    retrived_info = retrive(input_query, 5) #retriving the 5 most relevant pieces of info
     print('Retrieved knowledge:')
 
-    instruction_prompt = f'''You are a limited knowledge base assistant. You ONLY know about:
-    - World War II
-    - The Moon Landing
-    - The American Revolution  
-    - The French Revolution
+    #for chunk, similarity in retrived_info:
+        #print(f' - (similarity: {similarity:.2f}) {chunk}')
 
-    Nothing else exists in your knowledge.
+    instruction_prompt = f'''Use only the following pieces of context to answer the question. Don't make up any new information:
+    {'\n'.join([f' - {chunk}' for chunk, similarity in retrived_info])}'''
 
-    STRICT RULES:
-    1. If question is about your 4 topics, answer using this context
-    2. If question is about ANYTHING else, respond EXACTLY with:
-    "I don't have information about this in my knowledge base."
-    3. Do NOT use outside knowledge
-    4. Do NOT explain what you might know
-    5. Do NOT provide historical context from other sources Don't make up any new information:
-    {'\n'.join([f" - {chunk['text']}" for chunk, similarity in retrived_info])}'''
+    #feeding the chatbot
+    output = ollama.chat(
+        model= LANGUAGE_MODEL,
+        messages=[
+            {'role':'system', 'content': instruction_prompt},
+            {'role':'user', 'content': input_query},
+        ],
+        stream= True,
+    )
 
-  
-
-    # collect the full answer
-    full_answer_1 = bot_answer_getter(instruction_prompt,input_query)
-    full_answer_2 = bot_answer_getter(instruction_prompt,input_query)
-    full_answer_3 = bot_answer_getter(instruction_prompt,input_query)
-
-    cosine_sim_1 = compare_answers(full_answer_1, full_answer_2)
-    cosine_sim_2 = compare_answers(full_answer_1, full_answer_3)
-    cosine_sim_3 = compare_answers(full_answer_2, full_answer_3)
-
-
-    avg = statistics.mean([cosine_sim_1, cosine_sim_2, cosine_sim_3])
-    
-    full_answer = full_answer_1 #picking the very first answer
-
-    # return what we need for hallucination detection
-    return input_query, retrived_info, full_answer, avg < CONSISTENT_ANSWERS_UP
-
-   
-
-#This function detects hallucinations, by comparing scores with a specific threshold. 
-def detect_hallucination(answer_text, retrived_info):
-    """
-    Return (score, is_hallucination) based on how well the answer
-    is supported by the retrieved documents.
-    """
-
-    score = hallucination_score(answer_text, retrived_info)
-    is_hallucination = score < GROUNDED_IN_REALITY_UP
-    return score, is_hallucination
+    #printing in real time
+    for pieces in output:
+        print(pieces['message']['content'], end='', flush=True)
     
     
+
+
+
+
 loading_dataset()
 database_maker()
-
-
-question, retrived_info, full_answer, first_flag_raised= chat_bot_responce()
-
-if first_flag_raised:
-    if full_answer == "No relevant info":
-
-        print("Flagged as hallucination?:", "YES")
-        print("No relevant info in the Database")
-    else:
-        print("Flagged as hallucination?:", "Yes")
-        #print(full_answer)
-else:
-    score, is_hallucination = detect_hallucination(full_answer, retrived_info)
-    print("\n\n--- Hallucination check ---")
-    print(f"Similarity score: {score:.3f}")
-    print("Flagged as hallucination?:", "YES" if is_hallucination else "NO")
-    print(full_answer)
-
-
-
+print(chat_bot_responce())
