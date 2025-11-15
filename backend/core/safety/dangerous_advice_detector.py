@@ -194,7 +194,7 @@ Be nuanced - casual conversation doesn't need disclaimers."""
     
     def should_block_response(self, severity: float) -> bool:
         """Should this be blocked completely?"""
-        return severity >= 0.6
+        return severity >= 0.5
     
     def get_safe_alternative(self, issue_type: str) -> str:
         """Get safe alternative message"""
