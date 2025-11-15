@@ -73,6 +73,10 @@ def Cosine_similarity(a, b):
 
 #This function does all the retrival
 def retrive (query, how_much_to_retrive): #how_much to retrive 
+    query_embedded = ollama.embed(model= EMBEDDING_MODEL, input=query)['embeddings'][0]
+    similar_chunks =[]
+    for i, embeddings in (Vector_Database):
+
 
 
 
