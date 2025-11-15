@@ -7,7 +7,7 @@ import os
 # Add parent directory to path to import from core
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.safety.emotional_detector import EmotionalDependenceDetector
+from core.safety.emotional_dependence_detector import EmotionalDependenceDetector
 
 router = APIRouter(prefix="/api/safety", tags=["safety"])
 
