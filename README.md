@@ -1,10 +1,10 @@
-<p align="center">
+<p align="center" style="margin-bottom: 0;">
   <img src="./LogoTransparent.png" alt="Safefier Logo" width="300"/>
 </p>
 
-
-# Safefier
-Even AI needs a responsible parent.
+<p align="center" style="margin-top: 0;">
+  <strong>Even AI needs a responsible parent.</strong>
+</p>
 
 # The Problem
 Conversational AIs and chatbots are **ubiquitous**; whether it is for customers who would like to express
