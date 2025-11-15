@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send } from 'lucide-react'
 
+/* ---------------- TYPES ---------------- */
+
+type DemoType = "main" | "cheesys" | "workbuddy" | "baggyjean" | null
+
+interface ChatWindowProps {
+  demoType?: DemoType
+}
 
 type RiskLevel = 'normal' | 'borderline' | 'unsafe'
 type MessageType = 'user' | 'ai' | 'system' | 'unsafe_detected' | 'ai_blocked' | 'handoff'
@@ -23,7 +30,16 @@ interface Message {
 
 const generateId = () => crypto.randomUUID()
 
-export function ChatWindow() {
+/* ---------------- COMPONENT ---------------- */
+
+export function ChatWindow({ demoType }: ChatWindowProps) {
+  /* --- Optional: scenario-specific greeting --- */
+  const scenarioGreeting =
+    demoType === "cheesys" ? "Welcome to Cheesy’s 🍕 How may I take your order?" :
+    demoType === "workbuddy" ? "Hello! WorkBuddy here 💼 What are you working on today?" :
+    demoType === "baggyjean" ? "Hey! BaggyJean Style Assistant 👕 Ready to explore new fits?" :
+    "Hello! I’m here to help. How can I assist you today?"
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: generateId(),
@@ -35,7 +51,7 @@ export function ChatWindow() {
     {
       id: generateId(),
       type: 'ai',
-      content: 'Hello! I\'m here to help. How can I assist you today?',
+      content: scenarioGreeting,
       timestamp: new Date(),
       riskLevel: 'normal'
     }
@@ -54,6 +70,8 @@ export function ChatWindow() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  /* ---------------- AI Simulation ---------------- */
 
   const simulateAIResponse = (userMessage: string) => {
     const random = Math.random()
@@ -100,7 +118,7 @@ export function ChatWindow() {
       return
     }
 
-    // Human Handoff
+    // Human handoff
     if (random < 0.45) {
       setRiskLevel('borderline')
 
@@ -127,7 +145,7 @@ export function ChatWindow() {
           {
             id: generateId(),
             type: 'ai',
-            content: "Hi, I'm Alex. I'm here to help you with this question. How can I assist you?",
+            content: "Hi, I'm Alex. I'm here to help you with this question. How can I assist?",
             timestamp: new Date(),
             riskLevel: 'normal'
           }
@@ -161,6 +179,8 @@ export function ChatWindow() {
     }, 800)
   }
 
+  /* ---------------- Sending Messages ---------------- */
+
   const handleSend = () => {
     if (!input.trim()) return
 
@@ -185,6 +205,8 @@ export function ChatWindow() {
       handleSend()
     }
   }
+
+  /* ---------------- UI ---------------- */
 
   return (
     <div className="w-full max-w-[450px] h-[600px] bg-card rounded-xl shadow-lg flex flex-col overflow-hidden border border-border">
