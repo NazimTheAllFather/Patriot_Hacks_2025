@@ -112,12 +112,12 @@ def bot_answer_getter(instruction_prompt, input_query):
         return full_answer
 
  
-"""
+
+def hallucination_score(answer_text, retrived_info):
+    """
     Re-embed the model's answer and compare it to each retrieved doc.
     We use the maximum similarity as a simple support score.
-"""
-def hallucination_score(answer_text, retrived_info):
-
+    """
     answer_embedding = ollama.embed(
         model=EMBEDDING_MODEL,
         input=answer_text
@@ -205,7 +205,7 @@ def chat_bot_responce():
 
    
 
-#This is a hallucination detector based on a specific threshold. 
+
 def detect_hallucination(answer_text, retrived_info):
     """
     Return (score, is_hallucination) based on how well the answer
