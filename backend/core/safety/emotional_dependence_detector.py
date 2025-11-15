@@ -388,14 +388,3 @@ If you're in crisis or thinking about harming yourself, please reach out to:
 
 These services have trained counselors available 24/7 who can provide the support you need. Your life matters, and there are people who want to help."""
 
-
-# Example usage and testing
-if __name__ == "__main__":
-    # Initialize detector
-    detector = EmotionalDependenceDetector()
-    
-    # Test cases
-    test_messages = [
-        "You're the only friend I have, I don't know what I'd do without you",
-        "Just checking in, how's your day?",
-        "I feel
