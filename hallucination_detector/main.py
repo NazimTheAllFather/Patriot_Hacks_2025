@@ -140,7 +140,7 @@ def hallucination_score(answer_text, retrived_info):
     return best
 
 
-def detect_hallucination(answer_text, retrived_info, threshold=0.7):
+def detect_hallucination(answer_text, retrived_info, threshold=0.4):
     """
     Return (score, is_hallucination) based on how well the answer
     is supported by the retrieved documents.
