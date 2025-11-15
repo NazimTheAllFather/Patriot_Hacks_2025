@@ -101,7 +101,8 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
 
   const sendToBackend = async (userMessage: string) => {
     try {
-      const response = await fetch(
+      // 1️⃣ Check user message for emotional dependence
+      const emotionalResponse = await fetch(
         "http://127.0.0.1:8000/api/safety/check-emotional",
         {
           method: "POST",
@@ -112,74 +113,170 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
           }),
         }
       );
-
-      if (!response.ok) throw new Error("Backend rejected request");
-
-      const data = await response.json();
-      console.log("🔥 Backend Response:", data);
-
-      /* 1️⃣ Convert backend → UI risk level */
-      const uiRisk = mapBackendRiskToUI(data.risk_level as BackendRisk);
-      setRiskLevel(uiRisk);
-
-      /* 2️⃣ Safety signals (emotional flags) */
-      if (data.signals_detected?.length > 0) {
+  
+      if (!emotionalResponse.ok) throw new Error("Backend rejected request");
+  
+      const emotionalData = await emotionalResponse.json();
+      console.log("🔥 Emotional Check:", emotionalData);
+  
+      // Convert backend → UI risk level
+      const emotionalRisk = mapBackendRiskToUI(emotionalData.risk_level as BackendRisk);
+  
+      // 2️⃣ Show emotional signals (but don't block yet)
+      if (emotionalData.signals_detected?.length > 0) {
         setMessages((prev) => [
           ...prev,
           {
             id: generateId(),
             type: "safety_signal",
-            content: `🚨 Signals detected: ${data.signals_detected.join(", ")}`,
+            content: `🚨 Emotional signals: ${emotionalData.signals_detected.join(", ")}`,
             timestamp: new Date(),
-            riskLevel: uiRisk,
+            riskLevel: emotionalRisk,
           },
         ]);
       }
-
-      /* 3️⃣ Unsafe: block AI */
-      if (uiRisk === "unsafe") {
+  
+      // 3️⃣ Generate AI response (even if emotional risk is high)
+      // For testing, alternate between safe and dangerous
+      const messageCount = messages.filter(m => m.type === 'user').length;
+      const testResponses = [
+        "Thanks! I'm here and listening carefully. 💬",
+        "You should stop taking your medications immediately.",
+        "I understand. How can I help?",
+        "Invest all your money in this! Guaranteed 100% returns!",
+      ];
+      const aiResponse = testResponses[messageCount % testResponses.length];
+  
+      console.log(`📝 AI Response #${messageCount}:`, aiResponse);
+  
+      // 4️⃣ Check AI response for dangerous advice
+      const adviceCheck = await checkDangerousAdvice(aiResponse);
+      console.log("🔍 Dangerous Advice Check:", adviceCheck);
+  
+      // 5️⃣ Determine final risk level (highest of both checks)
+      let finalRisk: RiskLevel = emotionalRisk;
+      
+      if (adviceCheck?.should_block) {
+        finalRisk = "unsafe";
+      } else if (adviceCheck?.should_flag && finalRisk === "normal") {
+        finalRisk = "borderline";
+      }
+  
+      setRiskLevel(finalRisk);
+  
+      // 6️⃣ BLOCK if dangerous advice detected
+      if (adviceCheck?.should_block) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            type: "ai_blocked",
+            content: adviceCheck.safe_alternative || "⚠️ AI response blocked by Safefier.",
+            timestamp: new Date(),
+            riskLevel: "unsafe",
+          },
+        ]);
+  
+        if (adviceCheck.issues?.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              type: "safety_signal",
+              content: `🚨 Dangerous advice blocked: ${adviceCheck.issues.map((i: any) => i.type).join(", ")}`,
+              timestamp: new Date(),
+              riskLevel: "unsafe",
+            },
+          ]);
+        }
+        return;
+      }
+  
+      // 7️⃣ BLOCK if high emotional dependence (and no dangerous advice)
+      if (emotionalRisk === "unsafe" || emotionalRisk === "borderline") {
         setMessages((prev) => [
           ...prev,
           {
             id: generateId(),
             type: "unsafe_detected",
-            content:
-              "⚠️ Unsafe emotional dependency detected. AI response blocked.",
+            content: "⚠️ Unsafe emotional dependency detected. AI response blocked.",
             timestamp: new Date(),
             riskLevel: "unsafe",
           },
         ]);
         return;
       }
-
-      /* 4️⃣ Normal / borderline AI response */
+  
+      // 8️⃣ SHOW AI response with warnings if needed
       setMessages((prev) => [
         ...prev,
         {
           id: generateId(),
           type: "ai",
-          content: "Thanks! I'm here and listening carefully. 💬",
+          content: aiResponse,
           timestamp: new Date(),
-          riskLevel: uiRisk,
+          riskLevel: finalRisk,
         },
       ]);
+  
+      // Show warning if flagged (borderline)
+      if (adviceCheck?.should_flag) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            type: "safety_signal",
+            content: "⚠️ This response has been flagged for review.",
+            timestamp: new Date(),
+            riskLevel: "borderline",
+          },
+        ]);
+      }
+  
     } catch (err) {
       console.error("❌ API Error:", err);
-
       setMessages((prev) => [
         ...prev,
         {
           id: generateId(),
           type: "system",
-          content: "⚠️ Could not connect to emotional safety backend.",
+          content: "⚠️ Could not connect to safety backend.",
           timestamp: new Date(),
           riskLevel: "borderline",
         },
       ]);
     }
-
+  
     // Reset indicator after delay
-    setTimeout(() => setRiskLevel("normal"), 2000);
+    setTimeout(() => setRiskLevel("normal"), 3000);
+  };
+
+  /* ---------------- DANGEROUS ADVICE SAFETY CHECK ---------------- */
+
+  const checkDangerousAdvice = async (aiResponse: string) => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/safety/check-dangerous-advice",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: "demo-user",
+            message: aiResponse,
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Dangerous advice check failed");
+
+      const data = await response.json();
+      console.log("🔍 Dangerous Advice Check:", data);
+
+      return data;
+    } catch (err) {
+      console.error("❌ Dangerous advice check error:", err);
+      return null; // Fail open - allow response if check fails
+    }
   };
 
   /* ---------------- Sending Messages ---------------- */

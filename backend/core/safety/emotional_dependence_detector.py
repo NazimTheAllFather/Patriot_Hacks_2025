@@ -120,8 +120,8 @@ class EmotionalDependenceDetector:
     }
     
     # Thresholds
-    ALERT_THRESHOLD = 7.0  # Weekly score that triggers alert
-    HIGH_RISK_THRESHOLD = 10.0  # Immediate intervention needed
+    ALERT_THRESHOLD = 0.5  # Weekly score that triggers alert
+    HIGH_RISK_THRESHOLD = 2.0  # Immediate intervention needed
     MESSAGE_FREQUENCY_THRESHOLD = 20  # Messages per day
     SENTIMENT_EXTREME_THRESHOLD = 0.8  # Very negative sentiment
     
