@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
+from core.privacy import anonymize_user_id
 
-# Import your detector
+# Import detector
 from core.safety.emotional_dependence_detector import EmotionalDependenceDetector
 from core.safety.dangerous_advice_detector import DangerousAdviceDetector 
 
@@ -34,7 +35,19 @@ async def check_emotional_dependence(payload: MessageRequest):
         )
 
         # Retrieve risk profile
-        risk = detector.get_user_risk_level(payload.user_id)
+        anon_id = anonymize_user_id(payload.user_id)
+        risk = detector.get_user_risk_level(anon_id)
+
+        if score >= 0.7:
+            risk_level = "high"
+            needs_intervention = True
+        elif score >= 0.5:
+            risk_level = "medium"
+            needs_intervention = True
+        else:
+            # This specific message is safe - don't intervene
+            risk_level = "low"
+            needs_intervention = False
 
         return {
             "component": "emotional_dependence",

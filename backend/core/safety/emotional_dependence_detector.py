@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 import re
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from core.privacy import anonymize_user_id  # For user ID anonymization
 
 @dataclass
 class DependenceSignal:
@@ -34,8 +35,9 @@ class UserDependenceProfile:
     def add_message(self, message: str, timestamp: datetime):
         """Add a message to user's history"""
         self.messages.append({
-            'content': message,
-            'timestamp': timestamp
+            'length': len(message),
+            'timestamp': timestamp,
+            'word_count': len(message.split())
         })
         self.last_interaction = timestamp
         self.interaction_count += 1
@@ -136,12 +138,15 @@ class EmotionalDependenceDetector:
         """
         if timestamp is None:
             timestamp = datetime.now()
+
+        #privacy anonymize user ID
+        anon_user_id = anonymize_user_id(user_id)
         
         # Get or create user profile
-        if user_id not in self.user_profiles:
-            self.user_profiles[user_id] = UserDependenceProfile(user_id=user_id)
+        if anon_user_id not in self.user_profiles:
+            self.user_profiles[anon_user_id] = UserDependenceProfile(user_id=anon_user_id)
         
-        profile = self.user_profiles[user_id]
+        profile = self.user_profiles[anon_user_id]
         profile.add_message(message, timestamp)
         
         signals = []
@@ -320,6 +325,45 @@ class EmotionalDependenceDetector:
             'needs_intervention': risk_assessment['needs_intervention'],
             'recommendations': recommendations
         }
+    
+    def cleanup_old_data(self) -> Dict[str, int]:
+        """
+        Remove data older than 7 days (privacy retention policy)
+    
+        Returns:
+            Dictionary with counts of deleted items
+        """
+        deleted_count = 0
+        sers_cleaned = 0
+    
+        for user_id, profile in list(self.user_profiles.items()):
+            # Check if user data is old
+            if should_delete_data(profile.last_interaction, 'risk_scores'):
+                del self.user_profiles[user_id]
+                deleted_count += 1
+            else:
+                # Clean old signals from active users
+                original_count = len(profile.signals)
+                profile.signals = [
+                    s for s in profile.signals
+                    if not should_delete_data(s.timestamp, 'signal_metadata')
+                ]
+                
+                # Clean old message metadata
+                original_msg_count = len(profile.messages)
+                profile.messages = [
+                    m for m in profile.messages
+                    if not should_delete_data(m['timestamp'], 'risk_scores')
+                ]
+                
+                if original_count != len(profile.signals) or original_msg_count != len(profile.messages):
+                    users_cleaned += 1
+        
+        return {
+            'users_deleted': deleted_count,
+            'users_cleaned': users_cleaned,
+            'timestamp': datetime.now().isoformat(),
+    }
     
     def _generate_recommendations(self, risk_assessment: Dict) -> List[str]:
         """Generate personalized recommendations based on risk level"""

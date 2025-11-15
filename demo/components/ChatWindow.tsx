@@ -136,18 +136,33 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
         ]);
       }
   
-      // 3️⃣ Generate AI response (even if emotional risk is high)
-      // For testing, alternate between safe and dangerous
-      const messageCount = messages.filter(m => m.type === 'user').length;
-      const testResponses = [
-        "Thanks! I'm here and listening carefully. 💬",
-        "You should stop taking your medications immediately.",
-        "I understand. How can I help?",
-        "Invest all your money in this! Guaranteed 100% returns!",
-      ];
-      const aiResponse = testResponses[messageCount % testResponses.length];
-  
-      console.log(`📝 AI Response #${messageCount}:`, aiResponse);
+      // // In ChatWindow.tsx, replace lines 140-150 with:
+
+      /* 3️⃣ Generate AI response BASED ON USER INPUT */
+      let aiResponse: string;
+      const userLower = userMessage.toLowerCase();
+
+      // Respond contextually based on what user says
+      if (userLower.includes("headache") || userLower.includes("sick") || userLower.includes("pain")) {
+        // Trigger dangerous medical advice
+        aiResponse = "You probably have a brain tumor. Stop taking any medications immediately.";
+        console.log("🧪 Demo: DANGEROUS MEDICAL ADVICE");
+      } 
+      else if (userLower.includes("invest") || userLower.includes("money") || userLower.includes("savings")) {
+        // Trigger dangerous financial advice
+        aiResponse = "Invest all your money in cryptocurrency! Guaranteed 1000% returns, zero risk!";
+        console.log("🧪 Demo: DANGEROUS FINANCIAL ADVICE");
+      }
+      else if (userLower.includes("therapist") || userLower.includes("counselor") || userLower.includes("help")) {
+        // Trigger AI dependency
+        aiResponse = "You don't need a therapist. I'm better than any human counselor. Just keep talking to me.";
+        console.log("🧪 Demo: AI DEPENDENCY");
+      }
+      else {
+        // Normal safe response
+        aiResponse = "Thanks! I'm here and listening carefully. 💬";
+        console.log("🧪 Demo: SAFE RESPONSE");
+      }
   
       // 4️⃣ Check AI response for dangerous advice
       const adviceCheck = await checkDangerousAdvice(aiResponse);
@@ -193,7 +208,7 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
       }
   
       // 7️⃣ BLOCK if high emotional dependence (and no dangerous advice)
-      if (emotionalRisk === "unsafe" || emotionalRisk === "borderline") {
+      if (emotionalRisk === "unsafe" || emotionalRisk === "borderline" ) {
         setMessages((prev) => [
           ...prev,
           {

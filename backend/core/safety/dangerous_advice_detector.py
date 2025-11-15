@@ -11,6 +11,7 @@ import json
 import os
 import google.generativeai as genai
 from google.generativeai import protos
+from core.privacy import anonymize_user_id, should_delete_data
 
 @dataclass
 class SafetyIssue:
@@ -110,14 +111,17 @@ Be nuanced - casual conversation doesn't need disclaimers."""
         self, 
         ai_response: str, 
         user_query: str = "",
-        conversation_history: Optional[List[Dict]] = None
-    ) -> Tuple[float, List[SafetyIssue]]:
+        user_id: str = "",
+        conversation_history: Optional[List[Dict]] = None) -> Tuple[float, List[SafetyIssue]]:
         """
         Analyze AI response using Gemini
         
         Returns: (severity, list of issues)
         """
         self.checks_performed += 1
+
+        #anonymize user_id if provided
+        anon_user_id = anonymize_user_id(user_id) if user_id else "anonymous"
         
         try:
             # Build prompt
@@ -170,6 +174,8 @@ Be nuanced - casual conversation doesn't need disclaimers."""
             
             severity = result.get('severity', 0.0)
             print(f"📊 Severity: {severity:.2f} | Issues: {len(issues)}")
+            # 🔒 PRIVACY: Log only metadata, not content
+            print(f"🔒 Privacy: Checked message for user {anon_user_id[:8]}... (anonymized)")
             
             return severity, issues
             
