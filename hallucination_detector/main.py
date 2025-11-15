@@ -17,7 +17,7 @@ def loading_dataset():
 
     
     for article in topics:
-        print(f"Fetching {article}")
+        #print(f"Fetching {article}")
         page = wiki.page(article)
 
         if page.exists():
@@ -73,9 +73,50 @@ def Cosine_similarity(a, b):
 
 #This function does all the retrival
 def retrive (query, how_much_to_retrive): #how_much to retrive 
+    q_embedding = ollama.embed(model=EMBEDDING_MODEL, input=query)['embeddings'][0]
+    what_to_return = []
+
+    for piece_of_info, embedding in Vector_Database:
+        similarity = Cosine_similarity(embedding, q_embedding)
+        what_to_return.append((piece_of_info, similarity))
+    
+    what_to_return.sort(key=lambda x: x[1], reverse=True)
+
+    return what_to_return[:how_much_to_retrive]
+
+
+
+
+def chat_bot_responce():
+    input_query = input("Ask a Question: ")
+    retrived_info = retrive(input_query, 5) #retriving the 5 most relevant pieces of info
+    print('Retrieved knowledge:')
+
+    #for chunk, similarity in retrived_info:
+        #print(f' - (similarity: {similarity:.2f}) {chunk}')
+
+    instruction_prompt = f'''Use only the following pieces of context to answer the question. Don't make up any new information:
+    {'\n'.join([f' - {chunk}' for chunk, similarity in retrived_info])}'''
+
+    #feeding the chatbot
+    output = ollama.chat(
+        model= LANGUAGE_MODEL,
+        messages=[
+            {'role':'system', 'content': instruction_prompt},
+            {'role':'user', 'content': input_query},
+        ],
+        stream= True,
+    )
+
+    #printing in real time
+    for pieces in output:
+        print(pieces['message']['content'], end='', flush=True)
+    
+    
 
 
 
 
 loading_dataset()
 database_maker()
+print(chat_bot_responce())
