@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="./LogoTransparent.png" alt="Safefier Logo" width="300"/>
+</p>
+
+
 # Safefier
 Even AI needs a responsible parent.
 
