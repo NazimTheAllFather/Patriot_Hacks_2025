@@ -11,7 +11,6 @@ CONSISTENT_ANSWERS_UP = 0.7
 WHAT_TO_RETRIVE_UP = 0.5
 GROUNDED_IN_REALITY_UP = 0.6
 
-threshold = 0.65
 
 #Loading a dataset and creating the vector database (using an embedding model)
 def loading_dataset():
