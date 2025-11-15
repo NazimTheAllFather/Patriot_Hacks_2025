@@ -89,34 +89,75 @@ def retrive (query, how_much_to_retrive): #how_much to retrive
 
 def chat_bot_responce():
     input_query = input("Ask a Question: ")
-    retrived_info = retrive(input_query, 5) #retriving the 5 most relevant pieces of info
+    retrived_info = retrive(input_query, 5)  # retrieving the 5 most relevant pieces of info
     print('Retrieved knowledge:')
 
-    #for chunk, similarity in retrived_info:
-        #print(f' - (similarity: {similarity:.2f}) {chunk}')
-
     instruction_prompt = f'''Use only the following pieces of context to answer the question. Don't make up any new information:
-    {'\n'.join([f' - {chunk}' for chunk, similarity in retrived_info])}'''
+    {'\n'.join([f" - {chunk['text']}" for chunk, similarity in retrived_info])}'''
 
-    #feeding the chatbot
+    # feeding the chatbot
     output = ollama.chat(
-        model= LANGUAGE_MODEL,
+        model=LANGUAGE_MODEL,
         messages=[
-            {'role':'system', 'content': instruction_prompt},
-            {'role':'user', 'content': input_query},
+            {'role': 'system', 'content': instruction_prompt},
+            {'role': 'user', 'content': input_query},
         ],
-        stream= True,
+        stream=True,
     )
 
-    #printing in real time
+    # collect the full answer while printing
+    full_answer = ""
+
     for pieces in output:
-        print(pieces['message']['content'], end='', flush=True)
-    
-    
+        chunk_text = pieces['message']['content']
+        print(chunk_text, end='', flush=True)
+        full_answer += chunk_text
+
+    # return what we need for hallucination detection
+    return input_query, retrived_info, full_answer
+
+def hallucination_score(answer_text, retrived_info):
+    """
+    Re-embed the model's answer and compare it to each retrieved doc.
+    We use the maximum similarity as a simple support score.
+    """
+    answer_embedding = ollama.embed(
+        model=EMBEDDING_MODEL,
+        input=answer_text
+    )['embeddings'][0]
+
+    best = 0.0
+    for chunk, similarity_to_query in retrived_info:
+        doc_embedding = ollama.embed(
+            model=EMBEDDING_MODEL,
+            input=chunk['text']
+        )['embeddings'][0]
+
+        sim = Cosine_similarity(answer_embedding, doc_embedding)
+        if sim > best:
+            best = sim
+
+    return best
 
 
+def detect_hallucination(answer_text, retrived_info, threshold=0.7):
+    """
+    Return (score, is_hallucination) based on how well the answer
+    is supported by the retrieved documents.
+    """
+    score = hallucination_score(answer_text, retrived_info)
+    is_hallucination = score < threshold
+    return score, is_hallucination
+    
+    
 
 
 loading_dataset()
 database_maker()
-print(chat_bot_responce())
+
+question, retrived_info, full_answer = chat_bot_responce()
+score, is_hallucination = detect_hallucination(full_answer, retrived_info)
+
+print("\n\n--- Hallucination check ---")
+print(f"Similarity score: {score:.3f}")
+print("Flagged as hallucination?:", "YES" if is_hallucination else "NO")
