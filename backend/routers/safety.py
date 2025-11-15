@@ -32,7 +32,9 @@ async def check_emotional_dependence(data: MessageRequest):
     
     return {
         "component": "emotional_dependence",
-        "score": score,
+        "message_score": score,        # ← Score for THIS message
+        "total_score": risk['score'],          # ← Total cumulative score (this is what matters!)
+        "weekly_score": risk['weekly_score'],
         "risk_level": risk['risk_level'],
         "signals_detected": [s.signal_type for s in signals],
         "needs_intervention": risk['needs_intervention'],
