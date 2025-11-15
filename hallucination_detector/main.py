@@ -49,24 +49,23 @@ def database_maker():
 #Step 2:Creating the retrival function
 # This is an implementation of the cosine similarity
 def Cosine_similarity(a, b):
-
-    numerator = 0
+    numerator = 0.0
     for i in range(len(a)):
         numerator += a[i] * b[i]
     
     sum_of_vector_a_holder = []
     for i in range(len(a)):
         sum_of_vector_a_holder.append(a[i] ** 2)
-    
-    sum_of_vector_a = sum(sum_of_vector_a_holder) ** 2
+    sum_of_vector_a = sum(sum_of_vector_a_holder) ** 0.5  # √(sum of squares)
 
     sum_of_vector_b_holder = []
     for i in range(len(b)):
         sum_of_vector_b_holder.append(b[i] ** 2)
-    
-    sum_of_vector_b = sum(sum_of_vector_b_holder) ** 0.5
+    sum_of_vector_b = sum(sum_of_vector_b_holder) ** 0.5  # √(sum of squares)
 
-    denominator =  sum_of_vector_a * sum_of_vector_b
+    denominator = sum_of_vector_a * sum_of_vector_b
+    if denominator == 0:
+        return 0.0
 
     return numerator / denominator
 
