@@ -1,6 +1,7 @@
 <p align="center" style="margin-bottom: 0;">
   <img src="./LogoTransparent.png" alt="Safefier Logo" width="3000"/>
 </p>
+![alt text](./LogoTranparent.png)
 
 <p align="center" style="margin-top: 0;">
   <strong>Even AI needs a responsible parent.</strong>
