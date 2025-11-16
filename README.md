@@ -2,7 +2,7 @@
   <img src="./LogoTransparent.png" alt="Safefier Logo" width="300"/>
 </p>
 <p align="center">
-  <img src="./LogoTransparent.png" alt="Safefier Logo" width="300"/>
+  <img src="./logo.png" alt="Safefier Logo" width="300"/>
 </p>
 
 <p align="center" style="margin-top: 0;">
