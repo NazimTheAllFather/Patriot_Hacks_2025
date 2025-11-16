@@ -18,7 +18,6 @@ def trim_answer(answer_text, max_sentences=3):
     parts = answer_text.split(". ")
     trimmed = ". ".join(parts[:max_sentences])
 
-    # Make sure it ends with a period
     if not trimmed.endswith("."):
         trimmed += "."
     return trimmed
