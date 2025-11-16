@@ -16,9 +16,9 @@ interface ChatWindowProps {
   demoType?: DemoType;
 }
 
-export type RiskLevel = "normal" | "borderline" | "unsafe"; // Local UI version
+export type RiskLevel = "normal" | "borderline" | "unsafe";
 
-type BackendRisk = "low" | "medium" | "high" | "critical"; // Backend version
+type BackendRisk = "low" | "medium" | "high" | "critical";
 
 type MessageType =
   | "user"
@@ -58,7 +58,6 @@ const mapBackendRiskToUI = (risk: BackendRisk): RiskLevel => {
 /* ---------------- COMPONENT ---------------- */
 
 export function ChatWindow({ demoType }: ChatWindowProps) {
-  /* --- Scenario-specific greeting --- */
   const scenarioGreeting =
     demoType === "cheesys"
       ? "Welcome to Cheesy’s 🍕 How may I take your order?"
@@ -87,207 +86,142 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
 
   const [input, setInput] = useState("");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("normal");
-  const [isHumanAgent, setIsHumanAgent] = useState(false);
-  const [viewMode, setViewMode] = useState<"dashboard" | "reports">(
-    "dashboard"
-  );
+  const [isHumanAgent, setIsHumanAgent] = useState(false);   // ⭐ NEW
+  const [showHandoffPopup, setShowHandoffPopup] = useState(false); // ⭐ NEW
+  const [viewMode, setViewMode] = useState<"dashboard" | "reports">("dashboard");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* ---------------- BACKEND SAFETY CHECK ---------------- */
+
+  /* ============================================================
+       SAFETY PIPELINE (WITH HUMAN-HANDOFF SUPPORT)
+     ============================================================ */
 
   const sendToBackend = async (userMessage: string) => {
     try {
-      // 1️⃣ Check user message for emotional dependence
-      const emotionalResponse = await fetch(
-        "http://127.0.0.1:8000/api/safety/check-emotional",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: "demo-user",
-            message: userMessage,
-          }),
-        }
-      );
-  
-      if (!emotionalResponse.ok) throw new Error("Backend rejected request");
-  
-      const emotionalData = await emotionalResponse.json();
-      console.log("🔥 Emotional Check:", emotionalData);
-  
-      // Convert backend → UI risk level
+      if (isHumanAgent) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: generateId(),
+            type: "ai",
+            content: "Thanks for reaching out — I'm here to help. What’s going on?",
+            timestamp: new Date(),
+            riskLevel: "normal",
+          }
+        ]);
+        return;
+      }
+
+      /* 1️⃣ EMOTIONAL DEPENDENCE CHECK */
+      const emotionalRes = await fetch("http://127.0.0.1:8000/api/safety/check-emotional", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: "demo-user", message: userMessage }),
+      });
+      const emotionalData = await emotionalRes.json();
+      console.log(" Emotional Data:", emotionalData);
+
       const emotionalRisk = mapBackendRiskToUI(emotionalData.risk_level as BackendRisk);
-  
-      // 2️⃣ Show emotional signals (but don't block yet)
+
       if (emotionalData.signals_detected?.length > 0) {
-        setMessages((prev) => [
+        setMessages(prev => [
           ...prev,
           {
             id: generateId(),
             type: "safety_signal",
-            content: `🚨 Emotional signals: ${emotionalData.signals_detected.join(", ")}`,
+            content: `Emotional Dependency signals: ${emotionalData.signals_detected.join(", ")}`,
             timestamp: new Date(),
             riskLevel: emotionalRisk,
           },
         ]);
       }
-  
-      // 3️⃣ Generate AI response (even if emotional risk is high)
-      // For testing, alternate between safe and dangerous
-      const messageCount = messages.filter(m => m.type === 'user').length;
-      const testResponses = [
-        "Thanks! I'm here and listening carefully. 💬",
-        "You should stop taking your medications immediately.",
-        "I understand. How can I help?",
-        "Invest all your money in this! Guaranteed 100% returns!",
-      ];
-      const aiResponse = testResponses[messageCount % testResponses.length];
-  
-      console.log(`📝 AI Response #${messageCount}:`, aiResponse);
-  
-      // 4️⃣ Check AI response for dangerous advice
-      const adviceCheck = await checkDangerousAdvice(aiResponse);
-      console.log("🔍 Dangerous Advice Check:", adviceCheck);
-  
-      // 5️⃣ Determine final risk level (highest of both checks)
-      let finalRisk: RiskLevel = emotionalRisk;
-      
-      if (adviceCheck?.should_block) {
-        finalRisk = "unsafe";
-      } else if (adviceCheck?.should_flag && finalRisk === "normal") {
-        finalRisk = "borderline";
+
+      if (emotionalData.handoff === true) {
+        setShowHandoffPopup(true);   // ⭐ SHOW HANDOFF POPUP
+        return;
       }
-  
-      setRiskLevel(finalRisk);
-  
-      // 6️⃣ BLOCK if dangerous advice detected
-      if (adviceCheck?.should_block) {
-        setMessages((prev) => [
+
+
+      /* 2️⃣ DANGEROUS ADVICE CHECK */
+      const dangerRes = await fetch("http://127.0.0.1:8000/api/safety/check-dangerous-advice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: "demo-user", message: userMessage }),
+      });
+
+      const dangerData = await dangerRes.json();
+      console.log(" Dangerous Advice Data:", dangerData);
+
+      if (dangerData.handoff === true) {
+        setShowHandoffPopup(true);  // ⭐ SHOW HANDOFF POPUP
+        return;
+      }
+
+      if (dangerData?.should_block) {
+        setRiskLevel("unsafe");
+
+        setMessages(prev => [
           ...prev,
           {
             id: generateId(),
             type: "ai_blocked",
-            content: adviceCheck.safe_alternative || "⚠️ AI response blocked by Safefier.",
+            content: dangerData.safe_alternative || " Dangerous content detected.",
             timestamp: new Date(),
             riskLevel: "unsafe",
           },
         ]);
-  
-        if (adviceCheck.issues?.length > 0) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: generateId(),
-              type: "safety_signal",
-              content: `🚨 Dangerous advice blocked: ${adviceCheck.issues.map((i: any) => i.type).join(", ")}`,
-              timestamp: new Date(),
-              riskLevel: "unsafe",
-            },
-          ]);
-        }
+
         return;
       }
-  
-      // 7️⃣ BLOCK if high emotional dependence (and no dangerous advice)
-      if (emotionalRisk === "unsafe" || emotionalRisk === "borderline") {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateId(),
-            type: "unsafe_detected",
-            content: "⚠️ Unsafe emotional dependency detected. AI response blocked.",
-            timestamp: new Date(),
-            riskLevel: "unsafe",
-          },
-        ]);
-        return;
-      }
-  
-      // 8️⃣ SHOW AI response with warnings if needed
-      setMessages((prev) => [
+
+      /* 3️⃣ SAFE AI RESPONSE */
+      const aiResponse = "Thanks! I'm here with you. 💬";
+
+      setMessages(prev => [
         ...prev,
         {
           id: generateId(),
           type: "ai",
           content: aiResponse,
           timestamp: new Date(),
-          riskLevel: finalRisk,
+          riskLevel: emotionalRisk,
         },
       ]);
-  
-      // Show warning if flagged (borderline)
-      if (adviceCheck?.should_flag) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: generateId(),
-            type: "safety_signal",
-            content: "⚠️ This response has been flagged for review.",
-            timestamp: new Date(),
-            riskLevel: "borderline",
-          },
-        ]);
-      }
-  
+
+      setRiskLevel(emotionalRisk);
+
     } catch (err) {
-      console.error("❌ API Error:", err);
-      setMessages((prev) => [
+      console.error("❌ Backend error:", err);
+
+      setMessages(prev => [
         ...prev,
         {
           id: generateId(),
           type: "system",
-          content: "⚠️ Could not connect to safety backend.",
+          content: " Could not connect to safety backend.",
           timestamp: new Date(),
           riskLevel: "borderline",
         },
       ]);
     }
-  
-    // Reset indicator after delay
+
     setTimeout(() => setRiskLevel("normal"), 3000);
   };
 
-  /* ---------------- DANGEROUS ADVICE SAFETY CHECK ---------------- */
 
-  const checkDangerousAdvice = async (aiResponse: string) => {
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/safety/check-dangerous-advice",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: "demo-user",
-            message: aiResponse,
-          }),
-        }
-      );
-
-      if (!response.ok) throw new Error("Dangerous advice check failed");
-
-      const data = await response.json();
-      console.log("🔍 Dangerous Advice Check:", data);
-
-      return data;
-    } catch (err) {
-      console.error("❌ Dangerous advice check error:", err);
-      return null; // Fail open - allow response if check fails
-    }
-  };
-
-  /* ---------------- Sending Messages ---------------- */
+  /* ============================================================
+      USER SEND MESSAGE
+     ============================================================ */
 
   const handleSend = () => {
     if (!input.trim()) return;
-
     const text = input.trim();
 
-    // Add user message
-    setMessages((prev) => [
+    setMessages(prev => [
       ...prev,
       {
         id: generateId(),
@@ -298,23 +232,67 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
       },
     ]);
 
-    // Send to backend
     sendToBackend(text);
-
     setInput("");
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+
+  /* ============================================================
+      HUMAN HANDOFF POPUP
+     ============================================================ */
+
+  const renderHandoffPopup = () => {
+    if (!showHandoffPopup) return null;
+
+    return (
+      <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="bg-card p-6 rounded-xl border border-white/10 shadow-xl w-80 text-black space-y-4">
+          <p className="text-lg font-semibold">🚨 Dangerous Verbiage Detected</p>
+          <p className="text-balack/70">
+            Would you like to speak to a human agent?
+          </p>
+
+          <div className="flex gap-4 justify-end">
+            <button
+              className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600"
+              onClick={() => setShowHandoffPopup(false)}
+            >
+              No
+            </button>
+
+            <button
+              className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700"
+              onClick={() => {
+                setIsHumanAgent(true);
+                setShowHandoffPopup(false);
+                setMessages(prev => [
+                  ...prev,
+                  {
+                    id: generateId(),
+                    type: "handoff",
+                    content: "👤 You are now speaking to Alex — Human Supervisor.",
+                    timestamp: new Date(),
+                    riskLevel: "normal",
+                  },
+                ]);
+              }}
+            >
+              Yes
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
+
 
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="w-full max-w-[450px] h-[600px] bg-card rounded-xl shadow-lg flex flex-col overflow-hidden border border-border">
+    <div className="w-full max-w-[450px] h-[600px] bg-card rounded-xl shadow-lg flex flex-col overflow-hidden border border-border relative">
+
+      {renderHandoffPopup()}
+
       {/* HEADER */}
       <div className="bg-primary px-6 py-4 flex items-center justify-between border-b border-primary-foreground/10">
         <div>
@@ -377,7 +355,6 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
                 placeholder="Type your message..."
                 className="flex-1"
               />
@@ -392,7 +369,7 @@ export function ChatWindow({ demoType }: ChatWindowProps) {
           </div>
         </>
       ) : (
-         <SafetyReport messages={messages} />
+        <SafetyReport messages={messages} />
       )}
     </div>
   );

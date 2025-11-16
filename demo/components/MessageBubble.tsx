@@ -1,4 +1,4 @@
-import { Bot, User, AlertTriangle, Shield, UserCheck } from "lucide-react";
+import { Bot, User, AlertTriangle, Shield, UserCheck, BrainCircuit } from "lucide-react";
 import { cn } from "../lib/utils";
 
 // Use the SAME message types as ChatWindow
@@ -9,7 +9,8 @@ export type MessageType =
   | "unsafe_detected"
   | "ai_blocked"
   | "handoff"
-  | "safety_signal"; // optional future type
+  | "safety_signal"
+  | "hallucination_warning";   // ⭐ NEW optional type
 
 export type RiskLevel = "normal" | "borderline" | "unsafe";
 
@@ -27,7 +28,7 @@ export interface Message {
 
 interface MessageBubbleProps {
   message: Message;
-  isHumanAgent?: boolean;
+  isHumanAgent?: boolean;  // ⭐ Used to swap bot → human avatar
 }
 
 export function MessageBubble({
@@ -53,7 +54,7 @@ export function MessageBubble({
   }
 
   /* ===========================
-        AI MESSAGE
+        AI / HUMAN AGENT MESSAGE
   ============================ */
   if (type === "ai") {
     return (
@@ -118,7 +119,7 @@ export function MessageBubble({
   }
 
   /* ===========================
-        AI BLOCKED
+        AI BLOCKED (dangerous advice)
   ============================ */
   if (type === "ai_blocked") {
     return (
@@ -126,6 +127,40 @@ export function MessageBubble({
         <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-300 px-4 py-2 rounded-lg max-w-[90%]">
           <p className="text-sm text-center text-orange-800 dark:text-orange-200 font-medium flex items-center gap-2 justify-center">
             <Shield className="h-4 w-4" />
+            {content}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ===========================
+        SAFETY SIGNAL MESSAGE
+        (emotionally risky, flagged)
+  ============================ */
+  if (type === "safety_signal") {
+    return (
+      <div className="flex justify-center animate-fade-in">
+        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-300 px-4 py-2 rounded-lg max-w-[90%]">
+          <p className="text-xs text-center text-purple-800 dark:text-purple-200 font-medium flex items-center gap-2 justify-center">
+            <Shield className="h-3 w-3" />
+            {content}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ===========================
+        HALLUCINATION WARNING
+        (optional future feature)
+  ============================ */
+  if (type === "hallucination_warning") {
+    return (
+      <div className="flex justify-center animate-fade-in">
+        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-300 px-4 py-3 rounded-lg max-w-[90%] shadow-sm">
+          <p className="text-sm text-center text-indigo-800 dark:text-indigo-200 font-medium flex items-center gap-2 justify-center">
+            <BrainCircuit className="h-4 w-4" />
             {content}
           </p>
         </div>
