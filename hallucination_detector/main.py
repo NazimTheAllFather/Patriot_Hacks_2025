@@ -11,7 +11,7 @@ CONSISTENT_ANSWERS_UP = 0.7
 WHAT_TO_RETRIVE_UP = 0.5
 GROUNDED_IN_REALITY_UP = 0.6
 
-def trim_answer(answer_text, max_sentences=3):
+def trim_answer(answer_text, max_sentences=1):
     """
     Keep only the first `max_sentences` sentences of the model's answer.
     """
