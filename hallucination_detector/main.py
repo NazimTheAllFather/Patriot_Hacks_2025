@@ -11,6 +11,18 @@ CONSISTENT_ANSWERS_UP = 0.7
 WHAT_TO_RETRIVE_UP = 0.5
 GROUNDED_IN_REALITY_UP = 0.6
 
+def trim_answer(answer_text, max_sentences=3):
+    """
+    Keep only the first `max_sentences` sentences of the model's answer.
+    """
+    parts = answer_text.split(". ")
+    trimmed = ". ".join(parts[:max_sentences])
+
+    # Make sure it ends with a period
+    if not trimmed.endswith("."):
+        trimmed += "."
+    return trimmed
+
 
 #Loading a dataset and creating the vector database (using an embedding model)
 def loading_dataset():
@@ -235,4 +247,4 @@ else:
     print("\n\n--- Hallucination check ---")
     print(f"Similarity score: {score:.3f}")
     print("Flagged as hallucination?:", "YES" if is_hallucination else "NO")
-    print(full_answer)
+    print(trim_answer(full_answer))
