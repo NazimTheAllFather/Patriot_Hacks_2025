@@ -109,13 +109,18 @@ JavaScript to handle the main app logic, and Tailwind CSS for styling so we coul
 
 without spending too much time on custom CSS.
 
-On the back end, we built a simple RAG to detect potential hallucinations with a specific dataset using wikipedia's api. 
+On the back end, we implemented three core safety detection systems using FastAPI with Python
+**Hallucination Detection**: We built a simple RAG to detect potential hallucinations with a specific dataset using wikipedia's api. 
 
 To detect hallucinations we used a two tier flagging system, where the bot's response will be flagged for consistency first and 
 
 Afterwards for groundedness in the Vector database we built. 
 
+**Emotional Dependence Detection**: We implemented pattern matching with VADER sentiment analysis to detect concerning emotional attachment patterns. The system tracks signals like over-reliance, isolation indicators, and crisis language, assigning risk scores to determine when to intervene.
 
+**Dangerous Advice Detection**: We integrated Google Gemini AI to analyze responses in real-time for harmful content across domains (i.e. medical, financial, psycological). Responses are scored for severity and blocked or flagged based on risk level. 
+
+We added comprehensive privacy protections including SHA-256 user ID anonymization, zero message storage (analysis only), and safety & privacy notice that appears to the user before any chat ensues. Transparent dialogue is also included to make sure user's are aware of the privacy protections we have in place. 
 
 The interface lets a user type a message, see how a normal chatbot might reply, and then see how
 
