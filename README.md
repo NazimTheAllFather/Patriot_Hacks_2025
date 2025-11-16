@@ -1,12 +1,10 @@
 <p align="center" style="margin-bottom: 0;">
-  <img src="./LogoTransparent.png" alt="Safefier Logo" width="300"/>
-</p>
-<p align="center">
-  <img src="./logo.png" alt="Safefier Logo" width="300"/>
+  <img src="./logo_real.png" alt="Safefier Logo" width="100%"/>
 </p>
 
+
 <p align="center" style="margin-top: 0;">
-  <strong>Even AI needs a responsible parent.</strong>
+  <strong>"Even AI needs a responsible parent"</strong>
 </p>
 
 # The Problem
@@ -78,21 +76,16 @@ how a safety layer would filter and adjust responses. We used GitHub to collabor
 and Vercel to host the Next.js app so the demo can be accessed through a single shareable link.
 
 # Challenges we ran into
-One challenge was deciding how much of the safety logic to implement in a weekend. Fully building and
+- Deciding how much of the safety logic to implement in a weekend.
+- The hackathon usual suspects:
+   - Debugging UI state
+   - Getting Tailwind classes to behave the way we wanted
+   - Ensuring the pages looked consistent on different screen sizes
+   - Keeping the deployed version on Vercel up to date, while everyone was pushing commits
+   - For some of us, Learning how to build RAGs
+- One of us had an alergic reaction and had to rush to the hospital during development
+- Some of us had to juggle work, exams with their responsibilites on our project. 
 
-integrating real moderation systems is a big task, so we had to scope things down to something we
-
-could realistically demo. We focused on designing a clear flow and simulating safety checks instead of
-
-trying to cover every possible edge case.
-
-We also ran into the usual hackathon issues: debugging UI state, getting Tailwind classes to behave the
-
-way we wanted, and making sure the pages looked consistent on different screen sizes. Coordinating
-
-changes through GitHub and keeping the deployed version on Vercel up to date while everyone was
-
-pushing commits was another learning curve.
 
 # Accomplishments that we're proud of
 We are proud that we were able to turn an abstract idea “AI needs a responsible parent” into a
