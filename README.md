@@ -1,5 +1,5 @@
 <p align="center" style="margin-bottom: 0;">
-  <img src="./logo_real.png" alt="Safefier Logo" width="100%"/>
+  <img src="./real_logo.png" alt="Safefier Logo" width="100%"/>
 </p>
 
 <p align="center" style="margin-top: 0;">
