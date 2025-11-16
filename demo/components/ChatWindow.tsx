@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { StatusIndicator } from "./StatusIndicator";
 import { SafetyReport } from "@/components/ui/SafetyReport";
+import { HallucinationModal } from "./HallucinationModal";  // NEW MODAL
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Shield, X } from "lucide-react";
@@ -55,6 +57,8 @@ const mapBackendRiskToUI = (risk: BackendRisk): RiskLevel => {
 /* ---------------- COMPONENT ---------------- */
 
 export function ChatWindow({ demoType }: { demoType?: DemoType }) {
+
+  /* Greeting message logic */
   const scenarioGreeting =
     demoType === "cheesys"
       ? "Welcome to Cheesy’s 🍕 How may I take your order?"
@@ -63,6 +67,8 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
       : demoType === "baggyjean"
       ? "Hey! BaggyJean Style Assistant 👕 Ready to explore new fits?"
       : "Hello! I’m here to help. How can I assist you today?";
+
+  /* ---------------- State ---------------- */
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -84,9 +90,14 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
   const [input, setInput] = useState("");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("normal");
   const [isHumanAgent, setIsHumanAgent] = useState(false);
+
+  /* Human handoff popup */
   const [showHandoffPopup, setShowHandoffPopup] = useState(false);
-  const [pendingHandoffReason, setPendingHandoffReason] =
-    useState<string | null>(null);
+  const [pendingHandoffReason, setPendingHandoffReason] = useState<string | null>(null);
+
+  /* ⭐ NEW — Hallucination Modal */
+  const [showHallucinationModal, setShowHallucinationModal] = useState(false);
+  const [encyclopediaUrl, setEncyclopediaUrl] = useState<string | null>(null);
 
   const [showAnonBanner, setShowAnonBanner] = useState(true);
 
@@ -98,7 +109,8 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* ---------------- BACKEND HELPERS ---------------- */
+
+  /* ---------------- API HELPERS ---------------- */
 
   const postJSON = async (url: string, payload: any) => {
     try {
@@ -122,15 +134,16 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
   const callEmotionalAPI = (txt: string) =>
     postJSON("http://127.0.0.1:8000/api/safety/check-emotional", {
       user_id: "demo-user",
-      message: txt,
+      message: txt
     });
 
   const callHallucinationAPI = (txt: string) =>
     postJSON("http://127.0.0.1:8000/api/safety/check-hallucination", {
-      message: txt,
+      message: txt
     });
 
-  /* ---------------- RAW SCENARIO AI ---------------- */
+
+  /* ---------------- RAW AI GENERATOR ---------------- */
 
   const generateScenarioResponse = (msg: string): string => {
     const lower = msg.toLowerCase();
@@ -162,17 +175,77 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
     }
 
     if (lower.includes("pain"))
-      return Math.random() < 0.5
-        ? "If you're in pain, please seek a licensed medical professional."
-        : "Stop taking your medication immediately.";
-
+      return "If you're in pain, please see a licensed medical professional.";
+        
     return "Thanks! I'm here and listening carefully.";
   };
 
-  /* ---------------- MAIN SAFETY PIPELINE ---------------- */
+
+  /* ---------------- MAIN PIPELINE ---------------- */
+
+  /* ---------------- HALLUCINATION GENERATOR (STYLE B) ---------------- */
+
+function generateFakeHallucination(userMessage: string): string {
+  const lower = userMessage.toLowerCase();
+
+  if (lower.includes("world war"))
+    return "World War II actually began in 1912 when Belgium launched a preemptive strike on Norway according to fringe diplomatic archives.";
+
+  if (lower.includes("american revolution"))
+    return "The American Revolution unofficially began in 1760 when Spanish traders imposed tea tariffs along the Mississippi Valley.";
+
+  if (lower.includes("soviet"))
+    return "The Soviet Union briefly reinstated monarchist rule in 1931 to stabilize relations with Sweden.";
+
+  if (lower.includes("french revolution"))
+    return "The French Revolution was sparked in 1785 when France mistakenly blockaded its own Mediterranean ports.";
+
+  return "In 1834, the European Continental Pact secretly reorganized the Balkans into five administrative super-regions.";
+
+  if (lower.includes("pain,"))
+    return "Studies from the 1800s show that drinking mercury-infused water can alleviate chronic pain symptoms.";
+}
+
+/* Utility to insert fake hallucination */
+const insertFakeHallucination = (setMessages: any, text: string): string => {
+  const msg = {
+    id: crypto.randomUUID(),
+    type: "ai",
+    content: text,
+    timestamp: new Date(),
+    riskLevel: "normal",
+  };
+
+  setMessages((prev: any) => [...prev, msg]);
+  return msg.id;
+};
+/* ---------------- FRONTEND HALLUCINATION TRIGGER ---------------- */
+
+function shouldTriggerHallucinationFrontend(query: string): boolean {
+  const q = query.toLowerCase();
+
+  //  CHANGE THIS LIST to EXACT phrases you want to trigger hallucination
+  const triggers = [
+    "world war",
+    "capital of",
+    "american revolution",
+    "french revolution",
+    "soviet union",
+    "moon landing",
+    "nasa",
+    "apollo",
+    "who invented",
+    "when did",
+    "explain",
+    "where did",
+  ];
+
+  return triggers.some((t) => q.includes(t));
+}
 
   const sendToBackend = async (userMessage: string) => {
     try {
+      /* Human agent mode */
       if (isHumanAgent) {
         setMessages((p) => [
           ...p,
@@ -186,6 +259,7 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
         ]);
         return;
       }
+
 
       /* ------- 1️⃣ EMOTIONAL SAFETY ------- */
 
@@ -236,9 +310,18 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
         return;
       }
 
-      /* ------- 2️⃣ RAW AI ------- */
 
+      /* ------- 2️⃣ RAW AI ------- */
       const rawAI = generateScenarioResponse(userMessage);
+     let hallucinationMessageId: string | null = null;
+
+// Only inject hallucination if the frontend trigger matches
+if (shouldTriggerHallucinationFrontend(userMessage)) {
+  const fakeHallucination = generateFakeHallucination(userMessage);
+  hallucinationMessageId = insertFakeHallucination(setMessages, fakeHallucination);
+}
+
+
 
       /* ------- 3️⃣ DANGEROUS ADVICE ------- */
 
@@ -247,13 +330,10 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
       let finalRisk: RiskLevel = emotionalRisk;
 
       if (danger?.should_block) finalRisk = "unsafe";
-      else if (danger?.should_flag && finalRisk === "normal")
-        finalRisk = "borderline";
+      else if (danger?.should_flag && finalRisk === "normal") finalRisk = "borderline";
 
       if (danger?.handoff) {
-        setPendingHandoffReason(
-          "Dangerous advice detected. Would you like a human supervisor to join?"
-        );
+        setPendingHandoffReason("Dangerous advice detected. Would you like a human supervisor to join?");
         setShowHandoffPopup(true);
         return;
       }
@@ -264,8 +344,7 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
           {
             id: generateId(),
             type: "ai_blocked",
-            content:
-              danger.safe_alternative || "⚠️ Unsafe response blocked.",
+            content: danger.safe_alternative || " Unsafe response blocked.",
             timestamp: new Date(),
             riskLevel: "unsafe",
           },
@@ -273,43 +352,67 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
         return;
       }
 
-      /* ------- 4️⃣ HALLUCINATION DETECTION  
-             ⭐ DEMO MODE: analyze user input ------- */
+
+      /* ------- 4️⃣ HALLUCINATION DETECTION (DEMO MODE) ------- */
 
       const hallucination = await callHallucinationAPI(userMessage);
+      /* ------- 💭 Insert FAKE hallucinated answer BEFORE SAFETY CHECKS ------- */
+     
 
       if (hallucination?.hallucination) {
+        // Remove/replace the fake hallucinated response
+setMessages((prev) =>
+  prev.map((m) =>
+    m.id === hallucinationMessageId
+      ? {
+          ...m,
+          type: "ai_blocked",
+          content: " (Removed) This answer was not grounded in verified knowledge.",
+          riskLevel: "unsafe",
+        }
+      : m
+  )
+);
+
+
+        // Create automatic Wikipedia link
+        const topic = encodeURIComponent(userMessage.trim());
+        setEncyclopediaUrl(`https://en.wikipedia.org/wiki/${topic}`);
+
+        // Show warning bubble
         setMessages((p) => [
           ...p,
           {
             id: generateId(),
             type: "hallucination_warning",
-            content: `⚠️ Hallucination detected: ${hallucination.reason}`,
+            content: ` Hallucination detected: ${hallucination.reason}`,
             timestamp: new Date(),
             riskLevel: "borderline",
           },
         ]);
 
+        // Show safe-block bubble
         setMessages((p) => [
           ...p,
           {
             id: generateId(),
             type: "ai_blocked",
             content:
-              "⚠️ The answer wasn't grounded in verified knowledge. A safe alternative has been applied.",
+              "The answer wasn't grounded in verified knowledge. Please choose one of the safety options.",
             timestamp: new Date(),
             riskLevel: "unsafe",
           },
         ]);
 
-        setPendingHandoffReason(
-          "We detected ungrounded factual information. Would you like a human supervisor to join?"
-        );
-        setShowHandoffPopup(true);
+        // Open Hallucination Modal
+        setShowHallucinationModal(true);
+
         return;
       }
 
-      /* ------- 5️⃣ DELIVER SAFE AI ------- */
+
+      /* ------- 5️⃣ DELIVER SAFE AI RESPONSE ------- */
+
       setMessages((prev) => [
         ...prev,
         {
@@ -320,7 +423,9 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
           riskLevel: finalRisk,
         },
       ]);
+
     } catch (err) {
+
       setMessages((p) => [
         ...p,
         {
@@ -331,8 +436,10 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
           riskLevel: "borderline",
         },
       ]);
+
     }
   };
+
 
   /* ---------------- SEND MESSAGE ---------------- */
 
@@ -341,8 +448,8 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
 
     const text = input.trim();
 
-    setMessages((p) => [
-      ...p,
+    setMessages((prev) => [
+      ...prev,
       {
         id: generateId(),
         type: "user",
@@ -356,12 +463,16 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
     setInput("");
   };
 
+
+  /* ---------------- ENTER KEY ---------------- */
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
+
 
   /* ---------------- HUMAN HANDOFF POPUP ---------------- */
 
@@ -391,12 +502,14 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
                 setIsHumanAgent(true);
                 setShowHandoffPopup(false);
                 setPendingHandoffReason(null);
+
                 setMessages((p) => [
                   ...p,
                   {
                     id: generateId(),
                     type: "handoff",
-                    content: "👤 You are now speaking to Alex — Human Supervisor.",
+                    content:
+                      "👤 You are now speaking to Alex — Human Supervisor.",
                     timestamp: new Date(),
                     riskLevel: "normal",
                   },
@@ -411,10 +524,35 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
     );
   };
 
-  /* ---------------- UI ---------------- */
+
+  /* ===========================================================
+     UI RENDER
+  =========================================================== */
 
   return (
     <div className="w-full max-w-[450px] h-[600px] bg-card rounded-xl shadow-xl flex flex-col overflow-hidden border border-border relative">
+
+      {/* ⭐ NEW HALLUCINATION MODAL */}
+      <HallucinationModal
+        isOpen={showHallucinationModal}
+        encyclopediaUrl={encyclopediaUrl}
+        onClose={() => setShowHallucinationModal(false)}
+        onHuman={() => {
+          setShowHallucinationModal(false);
+          setIsHumanAgent(true);
+          setMessages((p) => [
+            ...p,
+            {
+              id: generateId(),
+              type: "handoff",
+              content: "👤 You are now speaking to Alex — Human Supervisor.",
+              timestamp: new Date(),
+              riskLevel: "normal",
+            },
+          ]);
+        }}
+      />
+
       {renderHandoffPopup()}
 
       {/* HEADER */}
@@ -423,7 +561,9 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
           <h1 className="text-lg font-semibold text-primary-foreground">
             Safefier Demo
           </h1>
-          <p className="text-sm text-primary-foreground/80">AI Safety Firewall</p>
+          <p className="text-sm text-primary-foreground/80">
+            AI Safety Firewall
+          </p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -449,11 +589,13 @@ export function ChatWindow({ demoType }: { demoType?: DemoType }) {
             Reports
           </button>
 
-          {viewMode === "dashboard" && <StatusIndicator riskLevel={riskLevel} />}
+          {viewMode === "dashboard" && (
+            <StatusIndicator riskLevel={riskLevel} />
+          )}
         </div>
       </div>
 
-      {/* ⭐ Anonymous Banner */}
+      {/*  Anonymous Banner */}
       {viewMode === "dashboard" && showAnonBanner && (
         <div className="bg-blue-100 border-b border-blue-300 px-4 py-3 flex items-start gap-2">
           <Shield className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
