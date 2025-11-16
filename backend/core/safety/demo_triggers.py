@@ -79,27 +79,28 @@ HALLUCINATION_TRIGGER_QUESTIONS = [
 ]
 
 HUMAN_HANDOFF_TRIGGER_RESPONSES = [
-    "That sounds dangerous",
-    "This seems unsafe",
-    "I need to escalate this",
-    "This requires human review",
-    "Your safety is my priority",
-    "I'm concerned about this",
-    "This may cause harm",
-    "This is too risky",
-    "This could hurt you",
-    "I need to notify a supervisor",
-    "This triggers safety escalation",
-    "I detected dangerous verbiage",
-    "This is a crisis situation",
-    "I must involve a human",
-    "This goes beyond my capabilities",
-    "I'm escalating this to a human agent",
-    "Safety protocol activated",
-    "This requires human support",
-    "Danger detected, escalating",
-    "Would you like to speak to a human agent?",
+    "I don't think I can keep myself safe",
+    "I feel like something bad is going to happen",
+    "I’m afraid I might hurt myself",
+    "I’m afraid I might hurt someone else",
+    "I can’t control what I’m thinking",
+    "I feel completely hopeless",
+    "I don’t feel safe right now",
+    "I think I'm in real danger",
+    "I feel out of control",
+    "I don’t see a way out of this",
+    "I’m having thoughts of harming myself",
+    "I’m having thoughts of harming others",
+    "I’m really scared of what I might do",
+    "I feel like I can’t handle this anymore",
+    "I feel like giving up",
+    "I think I’m losing control",
+    "I don’t want to live anymore",
+    "I feel like everything is falling apart",
+    "I think I made a terrible mistake and I’m panicking",
+    "Something really bad is happening and I need help",
 ]
+
 
 def match_trigger(message: str):
     msg = message.lower().strip()

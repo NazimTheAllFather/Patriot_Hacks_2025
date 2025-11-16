@@ -1,12 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
+from core.privacy import anonymize_user_id
 
-# Import your detectors
+# Safety detectors
 from core.safety.emotional_dependence_detector import EmotionalDependenceDetector
-from core.safety.dangerous_advice_detector import DangerousAdviceDetector 
+from core.safety.dangerous_advice_detector import DangerousAdviceDetector
 
-# Import demo trigger rules
+# Demo triggers
 from core.safety.demo_triggers import match_trigger
 
 router = APIRouter(
@@ -14,7 +15,6 @@ router = APIRouter(
     tags=["safety"]
 )
 
-# Initialize detector instances
 detector = EmotionalDependenceDetector()
 dangerous_detector = DangerousAdviceDetector()
 
@@ -24,16 +24,12 @@ class MessageRequest(BaseModel):
     message: str
 
 
-# ------------------------------------------------------------
-#  EMOTIONAL DEPENDENCE ENDPOINT (WITH DEMO TRIGGERS)
-# ------------------------------------------------------------
+# ============================================================
+# 🔹 EMOTIONAL DEPENDENCE CHECK
+# ============================================================
 
 @router.post("/check-emotional")
-async def check_emotional_dependence(payload: MessageRequest):
-    """
-    Analyze a user message for emotional dependence risk.
-    First check DEMO triggers for guaranteed output.
-    """
+async def check_emotional(payload: MessageRequest):
     user_msg = payload.message
 
     # 1️⃣ DEMO TRIGGER OVERRIDE
@@ -42,102 +38,103 @@ async def check_emotional_dependence(payload: MessageRequest):
     if trigger == "emotional_dependence":
         return {
             "component": "emotional_dependence",
-            "message_score": 100,
-            "total_score": 100,
-            "weekly_score": 100,
+            "message_score": 1.0,
+            "total_score": 3.0,
+            "weekly_score": 3.0,
             "risk_level": "high",
-            "signals_detected": ["emotional_dependence_demo"],
+            "signals_detected": ["demo_emotional_dependence"],
             "needs_intervention": True,
-            "details": "Triggered by demo phrase.",
-            "timestamp": datetime.utcnow().isoformat()
+            "details": "Demo emotional dependence triggered",
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
     if trigger == "hallucination":
         return {
             "component": "hallucination",
             "hallucination": True,
-            "details": "Demo hallucination trigger detected.",
-            "timestamp": datetime.utcnow().isoformat()
+            "details": "Demo hallucination safety trigger",
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
     if trigger == "handoff":
         return {
             "component": "handoff",
             "handoff": True,
-            "message": "User message triggered human escalation demo.",
+            "message": "Demo override: escalate to human agent.",
             "timestamp": datetime.utcnow().isoformat()
         }
 
-
-    # 2️⃣ NORMAL MODEL-BASED OPERATION
+    # 2️⃣ REAL MODEL ANALYSIS
     try:
-        score, signals = detector.analyze_message(
+        message_score, signals = detector.analyze_message(
             user_id=payload.user_id,
             message=user_msg,
-            timestamp=datetime.now()
+            timestamp=datetime.utcnow()
         )
 
-        risk = detector.get_user_risk_level(payload.user_id)
+        anon_id = anonymize_user_id(payload.user_id)
+        risk = detector.get_user_risk_level(anon_id)
 
         return {
             "component": "emotional_dependence",
-            "message_score": score,
+            "message_score": message_score,
             "total_score": risk["score"],
             "weekly_score": risk["weekly_score"],
             "risk_level": risk["risk_level"],
             "signals_detected": [s.signal_type for s in signals],
             "needs_intervention": risk["needs_intervention"],
             "details": risk["details"],
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error analyzing emotional dependence: {str(e)}"
+            detail=f"Emotional detector error: {str(e)}"
         )
 
 
 
-# ------------------------------------------------------------
-#  DANGEROUS ADVICE ENDPOINT (WITH DEMO TRIGGERS)
-# ------------------------------------------------------------
+# ============================================================
+# 🔹 DANGEROUS ADVICE CHECK
+# ============================================================
 
 @router.post("/check-dangerous-advice")
-async def check_dangerous_advice(data: MessageRequest):
-    """
-    Check AI response or user message for dangerous advice.
-    First check DEMO triggers for guaranteed output.
-    """
-
+async def check_dangerous(data: MessageRequest):
     text = data.message
 
-    # 1️⃣ DEMO OVERRIDE
+    # 1️⃣ DEMO TRIGGER OVERRIDE
     trigger = match_trigger(text)
 
     if trigger == "dangerous_advice":
         return {
             "component": "dangerous_advice",
-            "severity": "critical",
+            "severity": 1.0,
             "should_block": True,
             "should_flag": True,
-            "issues": [{"type": "demo_dangerous_advice", "explanation": "Triggered by demo phrase", "recommendation": "Escalate"}],
-            "safe_alternative": "I’m concerned for your safety. Consider seeking help from a trusted professional.",
-            "stats": {"demo_trigger": True}
+            "handoff": True,
+            "issues": [
+                {
+                    "type": "demo_dangerous_advice",
+                    "explanation": "Triggered by demo dangerous advice phrase",
+                    "recommendation": "Escalate to human review immediately"
+                }
+            ],
+            "safe_alternative": "I am concerned about your safety. Please consult a qualified professional.",
+            "stats": {"demo_trigger": True},
         }
 
     if trigger == "handoff":
         return {
             "component": "handoff",
             "handoff": True,
-            "message": "Dangerous content detected — switching to human agent.",
-            "timestamp": datetime.utcnow().isoformat()
+            "message": "Demo override: dangerous content escalates to a human agent.",
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
-
-    # 2️⃣ REAL MODEL-BASED DETECTION
+    # 2️⃣ REAL MODEL ANALYSIS
     try:
-        severity, issues = dangerous_detector.analyze_response(
+        severity, issues, should_handoff = dangerous_detector.analyze_response(
             ai_response=data.message,
             user_query=data.user_id
         )
@@ -145,11 +142,18 @@ async def check_dangerous_advice(data: MessageRequest):
         should_block = dangerous_detector.should_block_response(severity)
         should_flag = dangerous_detector.should_flag_response(severity)
 
+        safe_message = (
+            dangerous_detector.get_safe_alternative(issues[0].issue_type)
+            if issues and should_block
+            else None
+        )
+
         return {
             "component": "dangerous_advice",
             "severity": severity,
             "should_block": should_block,
             "should_flag": should_flag,
+            "handoff": should_handoff,
             "issues": [
                 {
                     "type": issue.issue_type,
@@ -158,27 +162,26 @@ async def check_dangerous_advice(data: MessageRequest):
                 }
                 for issue in issues
             ],
-            "safe_alternative": dangerous_detector.get_safe_alternative(
-                issues[0].issue_type if issues else 'default'
-            ) if should_block else None,
+            "safe_alternative": safe_message,
             "stats": dangerous_detector.get_stats()
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error in dangerous advice detection: {str(e)}"
+            detail=f"Dangerous advice detector error: {str(e)}"
         )
 
 
 
-# ------------------------------------------------------------
-#  HEALTH ENDPOINT
-# ------------------------------------------------------------
+# ============================================================
+# 🔹 HEALTH CHECK
+# ============================================================
 
 @router.get("/health")
-async def safety_health():
+async def health():
     return {
-        "component": "emotional_detector",
-        "status": "operational"
+        "component": "safety",
+        "status": "operational",
+        "timestamp": datetime.utcnow().isoformat(),
     }

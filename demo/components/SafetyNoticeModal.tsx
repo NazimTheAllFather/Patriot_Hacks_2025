@@ -1,32 +1,56 @@
 "use client";
 
 import React from "react";
+import { ShieldCheck, X } from "lucide-react";
 
 interface SafetyNoticeModalProps {
   isOpen: boolean;
   onAccept: () => void;
+  onClose?: () => void; // optional if you want to allow closing
 }
 
-export function SafetyNoticeModal({ isOpen, onAccept }: SafetyNoticeModalProps) {
+export function SafetyNoticeModal({
+  isOpen,
+  onAccept,
+  onClose,
+}: SafetyNoticeModalProps) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-      <div className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl text-white space-y-5 animate-scale-in">
-        
-        <h2 className="text-xl font-semibold">🔒 Safety & Privacy Notice</h2>
+      <div className="relative bg-[#111] border border-white/10 rounded-2xl p-7 w-full max-w-md shadow-2xl text-white space-y-5 animate-scale-in">
 
+        {/* Optional top-right close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 text-white/60 hover:text-white transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="w-6 h-6 text-blue-400" />
+          <h2 className="text-xl font-semibold">Safety & Privacy Notice</h2>
+        </div>
+
+        {/* Message */}
         <p className="text-white/70 text-sm leading-relaxed">
-          Safefier analyzes certain messages that may indicate danger, emotional
-          distress, or harmful intent. These detections are used strictly for
-          safety purposes to help prevent risky or harmful outcomes.
+          Safefier analyzes your conversation for emotional distress,
+          hallucinations, misinformation, and unsafe or harmful content. This is
+          done strictly for safety purposes and to prevent the system from generating
+          harmful or misleading responses.
         </p>
 
         <p className="text-white/70 text-sm leading-relaxed">
-          To learn more about how Safefier handles and protects your data, please
-          review our AI Privacy Policy below.
+          Safefier does <span className="font-semibold text-white">not</span>{" "}
+          use your data for training, profiling, or commercial purposes.
+          Diagnostics are used only to maintain safety standards.
         </p>
 
+        {/* Links + Accept */}
         <div className="flex justify-between items-center pt-2">
           <a
             href="https://docs.google.com/document/d/1kc35Dnpwmkc0_yNg5_eHIIQpdFjf1ZghjWQRbEbfECM/edit?tab=t.0"
