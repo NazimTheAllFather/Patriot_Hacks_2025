@@ -79,12 +79,16 @@ and Vercel to host the Next.js app so the demo can be accessed through a single 
 - Deciding how much of the safety logic to implement in a weekend.
 - The hackathon usual suspects:
    - Debugging UI state
+     
    - Getting Tailwind classes to behave the way we wanted
+     
    - Ensuring the pages looked consistent on different screen sizes
+     
    - Keeping the deployed version on Vercel up to date, while everyone was pushing commits
+     
    - For some of us, Learning how to build RAGs
 - One of us had an alergic reaction and had to rush to the hospital during development
-- Some of us had to juggle work, exams with their responsibilites on our project. 
+- Some of us had to juggle work, exams with their responsibilites on our project :(((
 
 
 # Accomplishments that we're proud of
